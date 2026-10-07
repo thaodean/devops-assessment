@@ -1,226 +1,66 @@
-# DevOps Engineer Homework
+# DevOps Engineer Homework Solution
 
-## Overview
+## Summary of Changes
 
-The goal of this assignment is to evaluate how you approach a typical DevOps engineering task involving:
+### 1. Application (`app/main.py`)
+- Implemented a Python Flask app delivering all specified REST endpoints: `/health`, `/version`, `/env`, and `/config` (POST, GET, DELETE).
+- Utilized an in-memory dictionary for `/config` key-value storage.
 
-- Application development / scripting
-- Containerization
-- Kubernetes
-- Helm
-- Terraform
-- CI/CD
-- Code review
+### 2. Containerization (`Dockerfile`)
+- Used `python:3.11-slim` as a minimal base image.
+- Configured non-root execution (`appuser`, UID 10001) for security.
+- Standardized exposed port to `8080`.
 
-The repository contains intentionally incomplete and imperfect components.
-Your task is to complete, improve and document the solution.
+### 3. Helm Chart (`helm/`)
+- Fixed Service label selector (`app: myapp`).
+- Corrected Ingress backend service reference (`myapp`).
+- Aligned container and service target ports to `8080`.
+- Added liveness and readiness probes pointing to `/health`.
+- Configured baseline CPU/memory requests and limits.
 
-You are not expected to produce a perfect production-ready system. We are more interested in your engineering approach, decision-making and ability to balance quality with the time constraints.
+### 4. Terraform (`terraform/`)
+- Fixed HCL syntax errors and missing quotes in `main.tf`.
+- Corrected Helm chart path to `../helm`.
+- Linked `namespace`, `image_tag`, and `environment` dynamically to Terraform variables.
+- Defined explicit provider version constraints and outputs.
 
-Time limit: approximately **3 hours**
+### 5. CI/CD Pipeline (`.gitlab-ci.yml`)
+- Structured pipeline into 4 distinct stages: `lint`, `build`, `test`, and `deploy`.
+- Added automated container health tests against `/health` and `/version` endpoints prior to deployment.
 
-## Repository Contents
+---
 
-The repository contains:
+## Assumptions
 
-- An incomplete application skeleton
-- Terraform configuration requiring review and improvement
-- An incomplete Helm chart
-- An incomplete CI/CD pipeline
+- **In-Memory State:** Since no database was required by the specification, state for `/config` resides in process memory and resets on pod restart.
+- **Environment Overrides:** `helm/values.yaml` provides `dev` fallback defaults for local development, while Terraform sets `prod` when provisioning infrastructure.
+- **Cluster Target:** Targeted for local Kubernetes environments using `~/.kube/config`.
 
-Your task is to complete and improve these components. Our goal is to understand your engineering approach, and we will build the upcoming technical interview on this project.
+---
 
-## Goal 1
+## Known Limitations
 
-Complete and improve the provided project.
+- **Volatile Storage:** `/config` entries do not persist across container restarts.
+- **Horizontal Scaling:** Scaling `replicaCount > 1` will lead to inconsistent key lookups across pods due to isolated in-memory stores.
+- **Ingress TLS:** Ingress manifest does not configure HTTPS/TLS termination certificates.
 
-The repository contains the following files:
+---
 
-- Incomplete application code
-- Broken/incomplete terraform configuration
-- Incomplete Helm Chart
-- Incomplete Gitlab CI pipeline
+## Production Improvements
 
-### Requirements
+1. **Persistent Backing Store:** Migrate `/config` key-value handling to Redis or PostgreSQL.
+2. **Remote Terraform State:** Use S3/GCS backends with distributed state locking (DynamoDB / GCP Cloud Storage).
+3. **Secret Management:** Manage sensitive parameters using HashiCorp Vault or Kubernetes External Secrets Operator.
+4. **GitOps Pipeline:** Shift from a direct `terraform apply` step in CI to a GitOps operator like ArgoCD or FluxCD.
+5. **TLS Integration:** Implement `cert-manager` for automatic Let's Encrypt TLS provisioning.
 
-#### Application
+---
 
-Implement a simple application in either:
+## Local Verification Guide
 
-- Go
-- Python
-
-The application must expose the following endpoints:
-
-##### `GET /health`
-
-**Response:**
-
-```json
-{
-    "status": "ok"
-}
-```
-
-##### `GET /version`
-
-**Response:**
-
-```json
-{
-    "version": "1.0.0"
-}
-```
-
-##### `GET /env`
-
-**Response:**
-
-```json
-{
-    "environment": "<value from ENVIRONMENT variable>"
-}
-```
-
-##### `POST /config`
-
-**Request:**
-
-```json
-{
-    "name": "database_url",
-    "value": "postgres://example"
-}
-```
-
-**Response:**
-
-```json
-{
-    "name": "database_url",
-    "value": "postgres://example"
-}
-```
-
-##### `GET /config/{name}`
-
-**Example:**
-
+### Run Container Locally
 ```bash
-GET /config/database_url
-```
-
-**Response:**
-
-```json
-{
-    "name": "database_url",
-    "value": "postgres://example"
-}
-```
-
-##### `DELETE /config/{name}`
-
-**Response:**
-
-```json
-{
-    "deleted": true
-}
-```
-
-#### Containerization
-
-- Create the necessary Dockerfile with minimal setup
-- The image should:
-  - build successfully
-  - run locally
-  - expose the application endpoint
-
-#### Terraform
-
-- Review and fix/complete the Terraform code
-- The Terraform code contains several issues and areas for improvement
-- In case you don't get time to implement changes describe what would you still improve and why
-- Document any changes you make
-
-#### Helm
-
-- Review and fix/complete the Helm Chart
-- The chart should deploy the application to Kubernetes
-- Document any change you make
-
-#### Gitlab CI
-
-- Complete the pipeline so it becomes capable of building and deploying the application
-- The pipeline should support the workflow required to build and deploy the application
-- The pipeline should be logically complete and demonstrate how you would automate the process
-- Add any other necessary jobs to the pipeline
-
-#### Documentation
-
-Update the project README with following information.
-
-##### What You Changed
-
-Describe the changes and the rationale behind it.
-
-##### Assumptions
-
-Describe the assumptions made while completing the assignment.
-
-##### Known Limitations
-
-Describe anything you intentionally omitted.
-
-##### Production Improvements
-
-Describe how you would evolve this solution for production use.
-
-### Deliverables
-
-- Source Code of the Go/Python application
-- Dockerfile
-- Terraform changes
-- Helm changes
-- CI pipeline changes
-- README describing decisions, assumptions and user guide for the project.
-
-### Notes
-
-You are not expected to deploy to a cloud provider.
-The solution should work with a local Kubernetes cluster such as:
-
-- Kind
-- Minikube
-- K3d
-
-### Timing
-
-Timebox yourself to approximately **3 hours**. If you can't finish the work within the timebox, describe in the README.md what is left and how you would approach it.
-
-## Goal 2
-
-You get this half-baked project from one of your colleagues who is a Junior and asking for your guidance.
-
-Provide a short code review in `REVIEW.md` where you address the **top 5 most important things** to fix so the colleague can move forward.
-
-### Review Timing
-
-Spend no more than **30 minutes** on review and feedback.
-
-### Evaluation Criteria
-
-We will evaluate:
-
-- Code quality
-- Terraform quality
-- Kubernetes and Helm knowledge
-- CI/CD design and implementation
-- Documentation quality
-- Code review quality
-- Maintainability and operational thinking
-
-### Use of AI
-
-The use of AI-assisted tools is permitted. However, we encourage you to complete the assignment primarily based on your own knowledge, experience and reasoning. During the interview, we will discuss your implementation choices, trade-offs and decision-making process, so it is important that you fully understand and can explain every part of your solution.
+podman build -t myapp:1.0.0 .
+podman run -d -p 8080:8080 -e ENVIRONMENT=dev --name myapp myapp:1.0.0
+curl [http://127.0.0.1:8080/health](http://127.0.0.1:8080/health)
+podman stop myapp && podman rm myapp
