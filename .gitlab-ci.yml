@@ -8,21 +8,28 @@ variables:
   IMAGE_NAME: myapp
   IMAGE_TAG: $CI_COMMIT_SHORT_SHA
 
-lint:
+helm-lint:
   stage: lint
-  image: alpine:latest
+  image: alpine/helm:latest
   script:
-    - echo "Validating Terraform formatting and Helm charts..."
+    - helm lint ./helm
+
+terraform-fmt:
+  stage: lint
+  image: hashicorp/terraform:light
+  script:
+    - terraform fmt -check ./terraform
 
 build:
   stage: build
   script:
-    - docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest -f Dockerfile .
+    - docker build -t ${CI_REGISTRY_IMAGE}:${IMAGE_TAG} -f Dockerfile .
+    - docker push ${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
 
 test:
   stage: test
   script:
-    - docker run -d --name test-app -p 8080:8080 -e ENVIRONMENT=test ${IMAGE_NAME}:${IMAGE_TAG}
+    - docker run -d --name test-app -p 8080:8080 -e ENVIRONMENT=test ${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
     - sleep 3
     - curl -f http://localhost:8080/health || exit 1
     - curl -f http://localhost:8080/version || exit 1
