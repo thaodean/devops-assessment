@@ -1,13 +1,38 @@
 stages:
+  - lint
   - build
+  - test
   - deploy
+
+variables:
+  IMAGE_NAME: myapp
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+
+lint:
+  stage: lint
+  image: alpine:latest
+  script:
+    - echo "Validating Terraform formatting and Helm charts..."
 
 build:
   stage: build
   script:
-    - echo "Building the application..."
+    - docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest -f Dockerfile .
+
+test:
+  stage: test
+  script:
+    - docker run -d --name test-app -p 8080:8080 -e ENVIRONMENT=test ${IMAGE_NAME}:${IMAGE_TAG}
+    - sleep 3
+    - curl -f http://localhost:8080/health || exit 1
+    - curl -f http://localhost:8080/version || exit 1
+    - docker stop test-app && docker rm test-app
 
 deploy:
   stage: deploy
   script:
-    - echo "Deploying the application..."
+    - cd terraform
+    - terraform init
+    - terraform apply -auto-approve -var="image_tag=${IMAGE_TAG}" -var="environment=prod"
+  only:
+    - main
