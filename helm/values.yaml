@@ -2,9 +2,20 @@ replicaCount: 1
 
 image:
   repository: myapp
-  tag: latest
+  tag: 1.0.0
+  pullPolicy: IfNotPresent
 
 service:
-  port: 8080
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
 
 environment: dev
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
