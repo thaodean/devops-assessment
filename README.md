@@ -62,5 +62,5 @@
 ```bash
 podman build -t myapp:1.0.0 .
 podman run -d -p 8080:8080 -e ENVIRONMENT=dev --name myapp myapp:1.0.0
-curl [http://127.0.0.1:8080/health](http://127.0.0.1:8080/health)
+curl http://127.0.0.1:8080/health
 podman stop myapp && podman rm myapp
